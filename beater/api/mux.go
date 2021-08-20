@@ -22,6 +22,8 @@ import (
 	"net/http/pprof"
 	"regexp"
 
+	"github.com/elastic/apm-server/processor/firehose"
+
 	"github.com/pkg/errors"
 
 	"github.com/elastic/beats/v7/libbeat/beat"
@@ -70,6 +72,9 @@ const (
 	IntakeRUMPath = "/intake/v2/rum/events"
 
 	IntakeRUMV3Path = "/intake/v3/rum/events"
+
+	// Firehose routes
+	FirehoseLogPath = "/intake/v2/firehose/log/events"
 )
 
 // NewMux registers apm handlers to paths building up the APM Server API.
@@ -113,6 +118,7 @@ func NewMux(
 		{IntakePath, builder.backendIntakeHandler},
 		// The profile endpoint is in Beta
 		{ProfilePath, builder.profileHandler},
+		{FirehoseLogPath, builder.firehoseLogIntakeHandler},
 	}
 
 	for _, route := range routeMap {
@@ -167,6 +173,15 @@ func (r *routeBuilder) backendIntakeHandler() (request.Handler, error) {
 	}
 	h := intake.Handler(stream.BackendProcessor(r.cfg), requestMetadataFunc, r.batchProcessor)
 	return middleware.Wrap(h, backendMiddleware(r.cfg, r.authenticator, r.ratelimitStore, intake.MonitoringMap)...)
+}
+
+func (r *routeBuilder) firehoseLogIntakeHandler() (request.Handler, error) {
+	requestMetadataFunc := emptyRequestMetadata
+	if r.cfg.AugmentEnabled {
+		requestMetadataFunc = backendRequestMetadata
+	}
+	h := intake.Handler(stream.FirehoseProcessor(r.cfg), requestMetadataFunc, r.batchProcessor)
+	return middleware.Wrap(h, backendMiddleware(r.cfg, r.authenticator, r.ratelimitStore, firehose.MonitoringMap)...)
 }
 
 func (r *routeBuilder) rumIntakeHandler(newProcessor func(*config.Config) *stream.Processor) func() (request.Handler, error) {

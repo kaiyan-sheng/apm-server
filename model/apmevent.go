@@ -65,6 +65,7 @@ type APMEvent struct {
 	Metricset     *Metricset
 	Error         *Error
 	ProfileSample *ProfileSample
+	FirehoseLog   *FirehoseLog
 }
 
 // BeatEvent converts e to a beat.Event.
@@ -81,6 +82,8 @@ func (e *APMEvent) BeatEvent(ctx context.Context) beat.Event {
 		event.Fields = e.Error.fields()
 	case e.ProfileSample != nil:
 		event.Fields = e.ProfileSample.fields()
+	case e.FirehoseLog != nil:
+		event.Fields = e.FirehoseLog.fields()
 	default:
 		event.Fields = make(common.MapStr)
 	}

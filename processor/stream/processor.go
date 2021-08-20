@@ -83,6 +83,14 @@ func RUMV3Processor(cfg *config.Config) *Processor {
 	}
 }
 
+func FirehoseProcessor(cfg *config.Config) *Processor {
+	return &Processor{
+		Mconfig:        modeldecoder.Config{Experimental: cfg.Mode == config.ModeExperimental},
+		MaxEventSize:   cfg.MaxEventSize,
+		decodeMetadata: v2.DecodeNestedMetadata,
+	}
+}
+
 func (p *Processor) readMetadata(reader *streamReader, out *model.APMEvent) error {
 	if err := p.decodeMetadata(reader, out); err != nil {
 		err = reader.wrapError(err)

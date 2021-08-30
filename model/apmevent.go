@@ -53,12 +53,23 @@ type APMEvent struct {
 	Network     Network
 	Session     Session
 	URL         URL
+	Processor   Processor
+	Trace       Trace
 
 	// Timestamp holds the event timestamp.
+	//
+	// See https://www.elastic.co/guide/en/ecs/current/ecs-base.html
 	Timestamp time.Time
 
 	// Labels holds labels to apply to the event.
+	//
+	// See https://www.elastic.co/guide/en/ecs/current/ecs-base.html
 	Labels common.MapStr
+
+	// Message holds the message for log events.
+	//
+	// See https://www.elastic.co/guide/en/ecs/current/ecs-base.html
+	Message string
 
 	Transaction   *Transaction
 	Span          *Span
@@ -84,7 +95,8 @@ func (e *APMEvent) BeatEvent(ctx context.Context) beat.Event {
 		event.Fields = e.ProfileSample.fields()
 	case e.FirehoseLog != nil:
 		event.Fields = e.FirehoseLog.fields()
-	default:
+	}
+	if event.Fields == nil {
 		event.Fields = make(common.MapStr)
 	}
 
@@ -126,5 +138,8 @@ func (e *APMEvent) BeatEvent(ctx context.Context) beat.Event {
 	fields.maybeSetMapStr("event", e.Event.fields())
 	fields.maybeSetMapStr("url", e.URL.fields())
 	fields.maybeSetMapStr("session", e.Session.fields())
+	fields.maybeSetMapStr("processor", e.Processor.fields())
+	fields.maybeSetMapStr("trace", e.Trace.fields())
+	fields.maybeSetString("message", e.Message)
 	return event
 }
